@@ -1,0 +1,7 @@
+a111:
+    base_path: /
+    text_encoders: models/text_encoders
+    clip_vision: models/clip_vision
+    vae: models/vae
+    diffusion_models: models/diffusion_models/
+    loras: models/loras

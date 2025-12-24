@@ -1,0 +1,35 @@
+version: 0.2
+
+env:
+  variables:
+    WAN_I2V: https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/diffusion_models/wan2.1_i2v_480p_14B_bf16.safetensors
+    WAN_T2V: https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/diffusion_models/wan2.1_t2v_14B_bf16.safetensors
+    IMAGE_NAME: docker.io/${DOCKERHUB_USER}/comfyui-wan-serverless   # change if you like
+phases:
+  install:
+    runtime-versions: { docker: 20 }
+    commands:
+      - apt-get update -qq && apt-get install -y -qq wget ca-certificates
+      - mkdir -p models
+  pre_build:
+    commands:
+      - echo "🔐 Login to Docker Hub"
+      - echo "${DOCKERHUB_TOKEN}" | docker login -u "${DOCKERHUB_USER}" --password-stdin
+  build:
+    commands:
+      - echo "⬇️  Downloading WAN 2.1 models (~60 GB)"
+      - |
+        for url in "$WAN_I2V" "$WAN_T2V"; do
+          fname=$(basename "$url")
+          wget --progress=dot:giga -O "models/$fname" "$url"
+        done
+      - ls -lh models
+      - echo "🐳  Building image"
+      - docker build -t "${IMAGE_NAME}:${CODEBUILD_BUILD_NUMBER}" .
+      - docker tag "${IMAGE_NAME}:${CODEBUILD_BUILD_NUMBER}" "${IMAGE_NAME}:latest"
+  post_build:
+    commands:
+      - echo "📤 Pushing to Docker Hub"
+      - docker push "${IMAGE_NAME}:${CODEBUILD_BUILD_NUMBER}"
+      - docker push "${IMAGE_NAME}:latest"
+artifacts: { files: [] }   # nothing to keep
